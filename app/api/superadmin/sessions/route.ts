@@ -35,21 +35,34 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Butuh sessionToken atau userId" }, { status: 400 })
   }
 
-  const where: any = sessionToken ? { sessionToken } : { userId }
+  if (userId) {
+    // Kick all sessions for a user
+    await prisma.userSession.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false },
+    })
+    await prisma.user.update({
+      where: { id: userId },
+      data: { currentSessionToken: null },
+    })
+  } else if (sessionToken) {
+    // Kick specific session — first find which user owns it
+    const target = await prisma.userSession.findUnique({
+      where: { sessionToken },
+      select: { userId: true },
+    })
 
-  await prisma.$transaction([
-    prisma.userSession.updateMany({ where, data: { isActive: false } }),
-    // Reset currentSessionToken so next API call from that user returns 401
-    ...(userId
-      ? [prisma.user.update({ where: { id: userId }, data: { currentSessionToken: null } })]
-      : []),
-  ])
+    await prisma.userSession.updateMany({
+      where: { sessionToken },
+      data: { isActive: false },
+    })
 
-  if (sessionToken && !userId) {
-    // Find userId from sessionToken to invalidate user token too
-    const s = await prisma.userSession.findUnique({ where: { sessionToken }, select: { userId: true } })
-    if (s) {
-      await prisma.user.update({ where: { id: s.userId }, data: { currentSessionToken: null } })
+    if (target) {
+      // Only clear currentSessionToken if it still matches (user hasn't logged in from elsewhere)
+      await prisma.user.updateMany({
+        where: { id: target.userId, currentSessionToken: sessionToken },
+        data: { currentSessionToken: null },
+      })
     }
   }
 

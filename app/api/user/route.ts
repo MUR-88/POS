@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import { logActivity, getClientInfo } from "@/lib/activity-logger"
 
 const schema = z.object({
   name: z.string().min(1),
@@ -18,7 +19,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const data = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true, sessionTimeoutMins: true },
     orderBy: { createdAt: "desc" },
   })
   return NextResponse.json({ data })
@@ -37,6 +38,19 @@ export async function POST(req: Request) {
       data: { ...body, password: hashed },
       select: { id: true, name: true, email: true, role: true, isActive: true },
     })
+
+    logActivity({
+      userId: (session.user as any).id,
+      userEmail: session.user?.email ?? undefined,
+      userName: session.user?.name ?? undefined,
+      userRole: (session.user as any).role,
+      action: 'CREATE_USER',
+      resource: 'user',
+      resourceId: data.id,
+      details: { name: data.name, email: data.email, role: data.role },
+      ...getClientInfo(req as any),
+    })
+
     return NextResponse.json({ data }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 })

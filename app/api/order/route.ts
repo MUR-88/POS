@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { generateInvoiceNo, serializeOrder } from "@/lib/utils"
 import { z } from "zod"
+import { logActivity, getClientInfo } from "@/lib/activity-logger"
 
 const itemSchema = z.object({
   menuItemId: z.string(),
@@ -154,6 +155,18 @@ export async function POST(req: Request) {
       }
 
       return created
+    })
+
+    logActivity({
+      userId: session.user!.id!,
+      userEmail: session.user!.email ?? undefined,
+      userName: session.user!.name ?? undefined,
+      userRole: session.user!.role,
+      action: 'COMPLETE_ORDER',
+      resource: 'order',
+      resourceId: order.id,
+      details: { orderNo: order.orderNo, total: order.total },
+      ...getClientInfo(req as any),
     })
 
     return NextResponse.json({ data: { ...serializeOrder(order), pointsEarned } }, { status: 201 })

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logActivity, getClientInfo } from "@/lib/activity-logger"
 
-export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(session.user?.role as string))
@@ -34,6 +35,18 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
           },
         })
       }
+    })
+
+    logActivity({
+      userId: session.user!.id!,
+      userEmail: session.user!.email ?? undefined,
+      userName: session.user!.name ?? undefined,
+      userRole: session.user?.role,
+      action: 'VOID_ORDER',
+      resource: 'order',
+      resourceId: id,
+      details: { orderNo: order.orderNo },
+      ...getClientInfo(req as any),
     })
 
     return NextResponse.json({ data: { ok: true } })

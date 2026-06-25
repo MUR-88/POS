@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import { logActivity, getClientInfo } from "@/lib/activity-logger"
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -36,13 +37,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data: update,
       select: { id: true, name: true, email: true, role: true, isActive: true },
     })
+
+    logActivity({
+      userId: (session.user as any).id,
+      userEmail: session.user?.email ?? undefined,
+      userName: session.user?.name ?? undefined,
+      userRole: role,
+      action: 'UPDATE_USER',
+      resource: 'user',
+      resourceId: id,
+      details: { name: data.name, email: data.email, role: data.role },
+      ...getClientInfo(req as any),
+    })
+
     return NextResponse.json({ data })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 })
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
@@ -55,7 +69,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (id === session.user?.id)
     return NextResponse.json({ error: "Tidak bisa menghapus akun sendiri" }, { status: 400 })
 
-  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true, name: true, email: true } })
   if (!target) return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 })
 
   if (role === "SUPER_ADMIN") {
@@ -71,5 +85,18 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
 
   await prisma.user.delete({ where: { id } })
+
+  logActivity({
+    userId: (session.user as any).id,
+    userEmail: session.user?.email ?? undefined,
+    userName: session.user?.name ?? undefined,
+    userRole: role,
+    action: 'DELETE_USER',
+    resource: 'user',
+    resourceId: id,
+    details: { name: target.name, email: target.email, role: target.role },
+    ...getClientInfo(req as any),
+  })
+
   return NextResponse.json({ ok: true })
 }

@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation"
 import {
   Shield, Activity, Users, Settings, MonitorDot,
   RefreshCw, Trash2, LogOut, Clock, AlertTriangle,
-  CheckCircle2, XCircle, Info, ChevronLeft, ChevronRight,
+  CheckCircle2, XCircle, Info, ChevronLeft, ChevronRight, Plus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
@@ -66,7 +67,7 @@ type UserEntry = {
   role: string
   isActive: boolean
   createdAt: string
-  sessionTimeoutMins?: number
+  sessionTimeoutMins?: number | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -116,14 +117,43 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
   )
 }
 
+// ─── BulkActionBar ────────────────────────────────────────────────────────────
+
+function BulkActionBar({ count, onDelete, onClear, deleting }: { count: number; onDelete: () => void; onClear: () => void; deleting: boolean }) {
+  if (count === 0) return null
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 bg-purple-600/10 border border-purple-500/30 rounded-lg">
+      <span className="text-sm font-medium text-purple-300">{count} item dipilih</span>
+      <div className="flex-1" />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+        onClick={onClear}
+      >
+        Batal pilih
+      </Button>
+      <Button
+        size="sm"
+        className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white gap-1"
+        onClick={onDelete}
+        disabled={deleting}
+      >
+        <Trash2 className="h-3 w-3" />
+        {deleting ? "Menghapus..." : `Hapus ${count} item`}
+      </Button>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "overview", label: "Overview", icon: MonitorDot },
-  { id: "logs", label: "Activity Logs", icon: Activity },
-  { id: "sessions", label: "Sessions", icon: Shield },
-  { id: "users", label: "Users", icon: Users },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "logs",     label: "Activity Logs", icon: Activity },
+  { id: "sessions", label: "Sessions",      icon: Shield },
+  { id: "users",    label: "Users",         icon: Users },
+  { id: "settings", label: "Settings",      icon: Settings },
 ]
 
 export default function SuperAdminPage() {
@@ -131,7 +161,6 @@ export default function SuperAdminPage() {
   const router = useRouter()
   const [tab, setTab] = useState("overview")
 
-  // Gate: only SUPER_ADMIN
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role !== "SUPER_ADMIN") {
       router.replace("/dashboard")
@@ -143,7 +172,6 @@ export default function SuperAdminPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="px-6 py-4 border-b border-border bg-card/50">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
@@ -154,7 +182,6 @@ export default function SuperAdminPage() {
             <p className="text-xs text-muted-foreground">Full system control &amp; monitoring</p>
           </div>
         </div>
-        {/* Tabs */}
         <div className="flex gap-1 mt-4 overflow-x-auto">
           {TABS.map((t) => {
             const Icon = t.icon
@@ -177,13 +204,12 @@ export default function SuperAdminPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {tab === "overview" && <OverviewTab />}
-        {tab === "logs" && <LogsTab />}
-        {tab === "sessions" && <SessionsTab />}
-        {tab === "users" && <UsersTab />}
-        {tab === "settings" && <SettingsTab />}
+        {tab === "overview"  && <OverviewTab />}
+        {tab === "logs"      && <LogsTab />}
+        {tab === "sessions"  && <SessionsTab />}
+        {tab === "users"     && <UsersTab />}
+        {tab === "settings"  && <SettingsTab />}
       </div>
     </div>
   )
@@ -210,11 +236,11 @@ function OverviewTab() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard label="Total Users" value={stats.totalUsers} icon={Users} color="bg-blue-500/20 text-blue-400" />
-        <StatCard label="Users Aktif" value={stats.activeUsers} icon={CheckCircle2} color="bg-green-500/20 text-green-400" />
-        <StatCard label="Sessions Aktif" value={stats.activeSessions} icon={MonitorDot} color="bg-purple-500/20 text-purple-400" />
-        <StatCard label="Log Hari Ini" value={stats.logsToday} icon={Activity} color="bg-cyan-500/20 text-cyan-400" />
-        <StatCard label="Error Hari Ini" value={stats.errorsToday} icon={AlertTriangle} color={stats.errorsToday > 0 ? "bg-red-500/20 text-red-400" : "bg-slate-500/20 text-slate-400"} />
+        <StatCard label="Total Users"    value={stats.totalUsers}    icon={Users}         color="bg-blue-500/20 text-blue-400" />
+        <StatCard label="Users Aktif"    value={stats.activeUsers}   icon={CheckCircle2}  color="bg-green-500/20 text-green-400" />
+        <StatCard label="Sessions Aktif" value={stats.activeSessions} icon={MonitorDot}   color="bg-purple-500/20 text-purple-400" />
+        <StatCard label="Log Hari Ini"   value={stats.logsToday}     icon={Activity}      color="bg-cyan-500/20 text-cyan-400" />
+        <StatCard label="Error Hari Ini" value={stats.errorsToday}   icon={AlertTriangle} color={stats.errorsToday > 0 ? "bg-red-500/20 text-red-400" : "bg-slate-500/20 text-slate-400"} />
       </div>
 
       <div className="bg-card border border-border rounded-xl">
@@ -236,7 +262,9 @@ function OverviewTab() {
               </tr>
             </thead>
             <tbody>
-              {stats.recentLogs.map((log) => (
+              {stats.recentLogs.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-xs">Belum ada log. Login ulang untuk mulai merekam aktivitas.</td></tr>
+              ) : stats.recentLogs.map((log) => (
                 <tr key={log.id} className="border-b border-border/50 hover:bg-accent/30">
                   <td className="px-4 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtTime(log.createdAt)}</td>
                   <td className="px-4 py-2">
@@ -279,10 +307,13 @@ function LogsTab() {
   const [filterDateFrom, setFilterDateFrom] = useState("")
   const [filterDateTo, setFilterDateTo] = useState("")
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
   const LIMIT = 50
 
   const load = useCallback(async () => {
     setLoading(true)
+    setSelected(new Set())
     const p = new URLSearchParams({ page: String(page), limit: String(LIMIT) })
     if (filterAction) p.set("action", filterAction)
     if (filterDateFrom) p.set("dateFrom", filterDateFrom)
@@ -298,13 +329,43 @@ function LogsTab() {
 
   useEffect(() => { load() }, [load])
 
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (selected.size === logs.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(logs.map(l => l.id)))
+    }
+  }
+
+  async function deleteSelected() {
+    if (!confirm(`Hapus ${selected.size} log yang dipilih?`)) return
+    setDeleting(true)
+    await fetch("/api/superadmin/logs", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    })
+    setDeleting(false)
+    load()
+  }
+
   async function clearOld() {
-    if (!confirm("Hapus log lebih dari 90 hari?")) return
+    if (!confirm("Hapus semua log lebih dari 90 hari?")) return
     await fetch("/api/superadmin/logs?olderThanDays=90", { method: "DELETE" })
     load()
   }
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
+  const allSelected = logs.length > 0 && selected.size === logs.length
+  const someSelected = selected.size > 0 && selected.size < logs.length
 
   return (
     <div className="space-y-4">
@@ -313,51 +374,46 @@ function LogsTab() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">Action</Label>
-            <Input
-              placeholder="LOGIN, CREATE..."
-              value={filterAction}
-              onChange={(e) => { setFilterAction(e.target.value); setPage(1) }}
-              className="h-8 text-xs"
-            />
+            <Input placeholder="LOGIN, CREATE..." value={filterAction} onChange={(e) => { setFilterAction(e.target.value); setPage(1) }} className="h-8 text-xs" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Dari Tanggal</Label>
-            <Input
-              type="date"
-              value={filterDateFrom}
-              onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1) }}
-              className="h-8 text-xs"
-            />
+            <Input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1) }} className="h-8 text-xs" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Sampai Tanggal</Label>
-            <Input
-              type="date"
-              value={filterDateTo}
-              onChange={(e) => { setFilterDateTo(e.target.value); setPage(1) }}
-              className="h-8 text-xs"
-            />
+            <Input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(1) }} className="h-8 text-xs" />
           </div>
           <div className="flex items-end gap-2">
             <Button onClick={load} size="sm" className="h-8 flex-1 text-xs">
               <RefreshCw className="h-3 w-3 mr-1" />Refresh
             </Button>
-            <Button onClick={clearOld} variant="outline" size="sm" className="h-8 text-xs text-red-400 border-red-400/30 hover:bg-red-400/10">
+            <Button onClick={clearOld} variant="outline" size="sm" className="h-8 text-xs text-red-400 border-red-400/30 hover:bg-red-400/10" title="Hapus log > 90 hari">
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground">
-        {total.toLocaleString()} log ditemukan
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{total.toLocaleString()} log ditemukan</span>
       </div>
+
+      <BulkActionBar count={selected.size} onDelete={deleteSelected} onClear={() => setSelected(new Set())} deleting={deleting} />
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-accent/50 text-muted-foreground text-xs">
+                <th className="px-3 py-2 w-8">
+                  <Checkbox
+                    checked={allSelected}
+                    data-state={someSelected ? "indeterminate" : allSelected ? "checked" : "unchecked"}
+                    onCheckedChange={toggleAll}
+                    className="h-3.5 w-3.5"
+                  />
+                </th>
                 <th className="px-3 py-2 text-left">Waktu</th>
                 <th className="px-3 py-2 text-left">User</th>
                 <th className="px-3 py-2 text-left">Action</th>
@@ -369,16 +425,19 @@ function LogsTab() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs">Memuat...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-xs">Memuat...</td></tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs">Tidak ada log</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-xs">Tidak ada log. Login ulang untuk mulai merekam.</td></tr>
               ) : logs.map((log) => (
                 <>
                   <tr
                     key={log.id}
-                    className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                    className={cn("border-b border-border/50 hover:bg-accent/30 cursor-pointer", selected.has(log.id) && "bg-purple-500/5")}
                     onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                   >
+                    <td className="px-3 py-2" onClick={(e) => { e.stopPropagation(); toggleSelect(log.id) }}>
+                      <Checkbox checked={selected.has(log.id)} onCheckedChange={() => toggleSelect(log.id)} className="h-3.5 w-3.5" />
+                    </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtTime(log.createdAt)}</td>
                     <td className="px-3 py-2 text-xs">
                       <div>{log.userName ?? <span className="text-muted-foreground italic">System</span>}</div>
@@ -397,14 +456,12 @@ function LogsTab() {
                       ) : "—"}
                     </td>
                     <td className="px-3 py-2">
-                      {log.details && (
-                        <Info className={cn("h-3.5 w-3.5", expanded === log.id ? "text-purple-400" : "text-muted-foreground")} />
-                      )}
+                      {log.details && <Info className={cn("h-3.5 w-3.5", expanded === log.id ? "text-purple-400" : "text-muted-foreground")} />}
                     </td>
                   </tr>
                   {expanded === log.id && (
                     <tr key={`${log.id}-detail`} className="bg-accent/20 border-b border-border/50">
-                      <td colSpan={7} className="px-4 py-3 text-xs">
+                      <td colSpan={8} className="px-4 py-3 text-xs">
                         <div className="grid grid-cols-2 gap-x-8 gap-y-1 font-mono">
                           {log.userEmail && <div><span className="text-muted-foreground">Email: </span>{log.userEmail}</div>}
                           {log.userAgent && <div><span className="text-muted-foreground">Browser: </span>{parseUA(log.userAgent)}</div>}
@@ -427,11 +484,8 @@ function LogsTab() {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-accent/20">
-          <span className="text-xs text-muted-foreground">
-            Halaman {page} dari {totalPages}
-          </span>
+          <span className="text-xs text-muted-foreground">Halaman {page} dari {totalPages}</span>
           <div className="flex gap-1">
             <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
               <ChevronLeft className="h-3 w-3" />
@@ -488,78 +542,74 @@ function SessionsTab() {
         </Button>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-accent/50 text-muted-foreground text-xs">
-                <th className="px-4 py-2 text-left">User</th>
-                <th className="px-4 py-2 text-left">IP</th>
-                <th className="px-4 py-2 text-left">Browser</th>
-                <th className="px-4 py-2 text-left">Login</th>
-                <th className="px-4 py-2 text-left">Last Active</th>
-                <th className="px-4 py-2 text-left">Expires</th>
-                <th className="px-4 py-2 text-left">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs">Memuat...</td></tr>
-              ) : sessions.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs">Tidak ada session aktif</td></tr>
-              ) : sessions.map((s) => {
-                const isExpired = new Date(s.expiresAt) < now
-                const isCurrent = s.user.id === currentSession?.user?.id
-                return (
-                  <tr key={s.id} className={cn("border-b border-border/50", isCurrent && "bg-purple-500/5")}>
-                    <td className="px-4 py-3">
-                      <div className="text-xs font-medium">{s.user.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{s.user.email}</div>
-                      <Badge variant="outline" className={cn("text-[9px] h-3.5 mt-0.5", roleBadgeColor(s.user.role))}>
-                        {s.user.role}
-                      </Badge>
-                      {isCurrent && <Badge variant="outline" className="ml-1 text-[9px] h-3.5 bg-purple-500/20 text-purple-300 border-purple-500/30">Anda</Badge>}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{s.ipAddress ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{parseUA(s.deviceInfo)}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtTime(s.createdAt)}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtTime(s.lastActiveAt)}</td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      {isExpired ? (
-                        <span className="text-red-400 flex items-center gap-1"><XCircle className="h-3 w-3" />Expired</span>
-                      ) : (
-                        <span className="text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />{fmtTime(s.expiresAt)}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {!isCurrent && (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline" size="sm"
-                            className="h-7 text-xs text-red-400 border-red-400/30 hover:bg-red-400/10"
-                            disabled={kicking === s.id}
-                            onClick={() => kick(s)}
-                          >
-                            <LogOut className="h-3 w-3 mr-1" />Kick
-                          </Button>
-                          <Button
-                            variant="outline" size="sm"
-                            className="h-7 text-xs text-orange-400 border-orange-400/30 hover:bg-orange-400/10"
-                            onClick={() => kickAll(s.user.id, s.user.name)}
-                            title="Kick semua session user ini"
-                          >
-                            All
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+      {sessions.length === 0 && !loading && (
+        <div className="bg-card border border-border rounded-xl p-8 text-center text-muted-foreground text-sm">
+          Tidak ada session aktif. Login ulang untuk session muncul di sini.
         </div>
-      </div>
+      )}
+
+      {sessions.length > 0 && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-accent/50 text-muted-foreground text-xs">
+                  <th className="px-4 py-2 text-left">User</th>
+                  <th className="px-4 py-2 text-left">IP</th>
+                  <th className="px-4 py-2 text-left">Browser</th>
+                  <th className="px-4 py-2 text-left">Login</th>
+                  <th className="px-4 py-2 text-left">Last Active</th>
+                  <th className="px-4 py-2 text-left">Expires</th>
+                  <th className="px-4 py-2 text-left">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs">Memuat...</td></tr>
+                ) : sessions.map((s) => {
+                  const isExpired = new Date(s.expiresAt) < now
+                  const isCurrent = s.user.id === currentSession?.user?.id
+                  return (
+                    <tr key={s.id} className={cn("border-b border-border/50", isCurrent && "bg-purple-500/5")}>
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-medium">{s.user.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{s.user.email}</div>
+                        <div className="flex gap-1 mt-0.5">
+                          <Badge variant="outline" className={cn("text-[9px] h-3.5", roleBadgeColor(s.user.role))}>{s.user.role}</Badge>
+                          {isCurrent && <Badge variant="outline" className="text-[9px] h-3.5 bg-purple-500/20 text-purple-300 border-purple-500/30">Anda</Badge>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{s.ipAddress ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{parseUA(s.deviceInfo)}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtTime(s.createdAt)}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtTime(s.lastActiveAt)}</td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {isExpired ? (
+                          <span className="text-red-400 flex items-center gap-1"><XCircle className="h-3 w-3" />Expired</span>
+                        ) : (
+                          <span className="text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />{fmtTime(s.expiresAt)}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!isCurrent && (
+                          <div className="flex gap-1">
+                            <Button variant="outline" size="sm" className="h-7 text-xs text-red-400 border-red-400/30 hover:bg-red-400/10" disabled={kicking === s.id} onClick={() => kick(s)}>
+                              <LogOut className="h-3 w-3 mr-1" />Kick
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-7 text-xs text-orange-400 border-orange-400/30 hover:bg-orange-400/10" onClick={() => kickAll(s.user.id, s.user.name)} title="Kick semua session user ini">
+                              All
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -571,23 +621,51 @@ function UsersTab() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<UserEntry | null>(null)
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "KASIR", isActive: true, sessionTimeoutMins: "" })
-  const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showNewForm, setShowNewForm] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
   const { data: session } = useSession()
 
   const load = useCallback(async () => {
     setLoading(true)
+    setSelected(new Set())
     const res = await fetch("/api/user")
-    if (res.ok) {
-      const data = await res.json()
-      // Also fetch session timeout per user - not in GET /api/user, so we just use what we have
-      setUsers(data.data)
-    }
+    if (res.ok) setUsers((await res.json()).data)
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  function toggleSelect(id: string) {
+    if (id === session?.user?.id) return
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    const selectable = users.filter(u => u.id !== session?.user?.id).map(u => u.id)
+    if (selected.size === selectable.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(selectable))
+    }
+  }
+
+  async function deleteSelected() {
+    if (!confirm(`Hapus ${selected.size} user yang dipilih? Tindakan ini tidak bisa dibatalkan.`)) return
+    setDeleting(true)
+    await fetch("/api/superadmin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    })
+    setDeleting(false)
+    load()
+  }
 
   function startEdit(u: UserEntry) {
     setEditing(u)
@@ -602,7 +680,6 @@ function UsersTab() {
 
     await fetch(`/api/user/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
 
-    // Update session timeout via superadmin settings
     const timeout = form.sessionTimeoutMins === "" ? null : parseInt(form.sessionTimeoutMins)
     await fetch("/api/superadmin/settings", {
       method: "PATCH",
@@ -616,7 +693,7 @@ function UsersTab() {
   }
 
   async function deleteUser(u: UserEntry) {
-    if (!confirm(`Hapus user ${u.name}?`)) return
+    if (!confirm(`Hapus user ${u.name}? Tindakan ini tidak bisa dibatalkan.`)) return
     await fetch(`/api/user/${u.id}`, { method: "DELETE" })
     load()
   }
@@ -628,7 +705,6 @@ function UsersTab() {
 
     if (res.ok) {
       const newUser = (await res.json()).data
-      // Set timeout if specified
       if (form.sessionTimeoutMins) {
         await fetch("/api/superadmin/settings", {
           method: "PATCH",
@@ -638,25 +714,27 @@ function UsersTab() {
       }
       setShowNewForm(false)
       load()
+    } else {
+      const err = await res.json()
+      alert(err.error ?? "Gagal membuat user")
     }
     setSaving(false)
   }
 
-  async function kickUser(u: UserEntry) {
-    if (!confirm(`Kick semua session ${u.name}?`)) return
-    await fetch(`/api/superadmin/sessions?userId=${u.id}`, { method: "DELETE" })
-  }
+  const selectable = users.filter(u => u.id !== session?.user?.id)
+  const allSelected = selectable.length > 0 && selected.size === selectable.length
+  const someSelected = selected.size > 0 && selected.size < selectable.length
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className="text-sm text-muted-foreground">{users.length} user terdaftar</div>
-        <Button size="sm" className="h-8 text-xs bg-purple-600 hover:bg-purple-700" onClick={() => { setShowNewForm(true); setForm({ name: "", email: "", password: "", role: "KASIR", isActive: true, sessionTimeoutMins: "" }) }}>
-          + Tambah User
+        <Button size="sm" className="h-8 text-xs bg-purple-600 hover:bg-purple-700 gap-1"
+          onClick={() => { setShowNewForm(true); setForm({ name: "", email: "", password: "", role: "KASIR", isActive: true, sessionTimeoutMins: "" }) }}>
+          <Plus className="h-3.5 w-3.5" />Tambah User
         </Button>
       </div>
 
-      {/* New User Form */}
       {showNewForm && (
         <div className="bg-card border border-purple-500/30 rounded-xl p-4 space-y-3">
           <h3 className="text-sm font-semibold text-purple-300">Buat User Baru</h3>
@@ -668,11 +746,21 @@ function UsersTab() {
         </div>
       )}
 
+      <BulkActionBar count={selected.size} onDelete={deleteSelected} onClear={() => setSelected(new Set())} deleting={deleting} />
+
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-accent/50 text-muted-foreground text-xs">
+                <th className="px-4 py-2 w-8">
+                  <Checkbox
+                    checked={allSelected}
+                    data-state={someSelected ? "indeterminate" : allSelected ? "checked" : "unchecked"}
+                    onCheckedChange={toggleAll}
+                    className="h-3.5 w-3.5"
+                  />
+                </th>
                 <th className="px-4 py-2 text-left">User</th>
                 <th className="px-4 py-2 text-left">Role</th>
                 <th className="px-4 py-2 text-left">Status</th>
@@ -683,11 +771,11 @@ function UsersTab() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-xs">Memuat...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs">Memuat...</td></tr>
               ) : users.map((u) => (
                 editing?.id === u.id ? (
                   <tr key={u.id} className="border-b border-border bg-accent/20">
-                    <td colSpan={6} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       <UserForm form={form} setForm={setForm} />
                       <div className="flex gap-2 mt-3">
                         <Button size="sm" className="h-7 text-xs bg-purple-600 hover:bg-purple-700" disabled={saving} onClick={saveEdit}>Simpan</Button>
@@ -696,23 +784,32 @@ function UsersTab() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={u.id} className="border-b border-border/50 hover:bg-accent/30">
+                  <tr key={u.id} className={cn("border-b border-border/50 hover:bg-accent/30", selected.has(u.id) && "bg-purple-500/5")}>
                     <td className="px-4 py-3">
-                      <div className="text-xs font-medium">{u.name}</div>
+                      {u.id !== session?.user?.id && (
+                        <Checkbox checked={selected.has(u.id)} onCheckedChange={() => toggleSelect(u.id)} className="h-3.5 w-3.5" />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-xs font-medium flex items-center gap-1.5">
+                        {u.name}
+                        {u.id === session?.user?.id && <Badge variant="outline" className="text-[9px] h-3.5 bg-purple-500/20 text-purple-300 border-purple-500/30">Anda</Badge>}
+                      </div>
                       <div className="text-[10px] text-muted-foreground">{u.email}</div>
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant="outline" className={cn("text-[10px] h-4", roleBadgeColor(u.role))}>{u.role}</Badge>
                     </td>
                     <td className="px-4 py-3">
-                      {u.isActive ? (
-                        <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Aktif</span>
-                      ) : (
-                        <span className="text-xs text-red-400 flex items-center gap-1"><XCircle className="h-3 w-3" />Nonaktif</span>
-                      )}
+                      {u.isActive
+                        ? <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Aktif</span>
+                        : <span className="text-xs text-red-400 flex items-center gap-1"><XCircle className="h-3 w-3" />Nonaktif</span>}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{u.sessionTimeoutMins != null ? `${u.sessionTimeoutMins} mnt` : "Default"}</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {u.sessionTimeoutMins != null ? `${u.sessionTimeoutMins} mnt` : "Default"}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                       {format(new Date(u.createdAt), "dd/MM/yy")}
@@ -721,14 +818,9 @@ function UsersTab() {
                       <div className="flex gap-1">
                         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => startEdit(u)}>Edit</Button>
                         {u.id !== session?.user?.id && (
-                          <>
-                            <Button variant="outline" size="sm" className="h-7 text-xs text-orange-400 border-orange-400/30 hover:bg-orange-400/10" onClick={() => kickUser(u)} title="Kick session">
-                              <LogOut className="h-3 w-3" />
-                            </Button>
-                            <Button variant="outline" size="sm" className="h-7 text-xs text-red-400 border-red-400/30 hover:bg-red-400/10" onClick={() => deleteUser(u)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </>
+                          <Button variant="outline" size="sm" className="h-7 text-xs text-red-400 border-red-400/30 hover:bg-red-400/10" onClick={() => deleteUser(u)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -760,11 +852,8 @@ function UserForm({ form, setForm, isNew }: { form: any; setForm: any; isNew?: b
       </div>
       <div className="space-y-1">
         <Label className="text-xs">Role</Label>
-        <select
-          value={form.role}
-          onChange={(e) => setForm({ ...form, role: e.target.value })}
-          className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
-        >
+        <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
+          className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background">
           <option value="SUPER_ADMIN">SUPER_ADMIN</option>
           <option value="ADMIN">ADMIN</option>
           <option value="MANAGER">MANAGER</option>
@@ -773,21 +862,13 @@ function UserForm({ form, setForm, isNew }: { form: any; setForm: any; isNew?: b
       </div>
       <div className="space-y-1">
         <Label className="text-xs">Session Timeout (menit)</Label>
-        <Input
-          type="number"
-          placeholder="Default (global)"
-          value={form.sessionTimeoutMins}
-          onChange={(e) => setForm({ ...form, sessionTimeoutMins: e.target.value })}
-          className="h-8 text-xs"
-        />
+        <Input type="number" placeholder="Default (global)" value={form.sessionTimeoutMins}
+          onChange={(e) => setForm({ ...form, sessionTimeoutMins: e.target.value })} className="h-8 text-xs" />
       </div>
       <div className="space-y-1">
         <Label className="text-xs">Status</Label>
-        <select
-          value={String(form.isActive)}
-          onChange={(e) => setForm({ ...form, isActive: e.target.value === "true" })}
-          className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
-        >
+        <select value={String(form.isActive)} onChange={(e) => setForm({ ...form, isActive: e.target.value === "true" })}
+          className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background">
           <option value="true">Aktif</option>
           <option value="false">Nonaktif</option>
         </select>
@@ -834,34 +915,26 @@ function SettingsTab() {
           <Label className="text-sm">Session Timeout Global (menit)</Label>
           <p className="text-xs text-muted-foreground">Default untuk semua user. Bisa di-override per-user di tab Users.</p>
           <div className="flex gap-2 items-center">
-            <Input
-              type="number"
-              min="15"
-              max="480"
-              value={settings.session_timeout_mins}
-              onChange={(e) => setSettings({ ...settings, session_timeout_mins: e.target.value })}
-              className="w-32 h-9"
-            />
+            <Input type="number" min="15" max="480" value={settings.session_timeout_mins}
+              onChange={(e) => setSettings({ ...settings, session_timeout_mins: e.target.value })} className="w-32 h-9" />
             <span className="text-sm text-muted-foreground">menit</span>
-            <span className="text-xs text-muted-foreground">(= {Math.round(parseInt(settings.session_timeout_mins || "120") / 60 * 10) / 10} jam)</span>
+            <span className="text-xs text-muted-foreground">
+              (= {Math.round(parseInt(settings.session_timeout_mins || "120") / 60 * 10) / 10} jam)
+            </span>
           </div>
         </div>
 
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-300 flex gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>Perubahan timeout akan berlaku untuk login berikutnya. Session yang sedang aktif menggunakan timeout saat login.</span>
+          <span>Perubahan timeout berlaku untuk login berikutnya. Session aktif menggunakan timeout saat login.</span>
         </div>
 
-        <Button
-          onClick={save}
-          disabled={saving}
-          className={cn("bg-purple-600 hover:bg-purple-700", saved && "bg-green-600 hover:bg-green-700")}
-        >
+        <Button onClick={save} disabled={saving}
+          className={cn("bg-purple-600 hover:bg-purple-700", saved && "bg-green-600 hover:bg-green-700")}>
           {saved ? <><CheckCircle2 className="h-4 w-4 mr-2" />Tersimpan!</> : saving ? "Menyimpan..." : "Simpan Pengaturan"}
         </Button>
       </div>
 
-      {/* Suggestions box */}
       <div className="bg-card border border-border rounded-xl p-5 space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Info className="h-4 w-4 text-purple-400" />
@@ -873,7 +946,7 @@ function SettingsTab() {
             "Backup & restore database otomatis",
             "Email/WhatsApp notifikasi stok habis & ringkasan shift",
             "Log retention policy (auto-delete log lama)",
-            "Rate limiting & brute-force protection",
+            "Rate limiting & brute-force protection login",
             "Printer thermal integration (ESC/POS)",
             "Multi-outlet / cabang",
             "Inventory raw material & resep",
@@ -881,7 +954,6 @@ function SettingsTab() {
             "Split bill",
             "Loyalty tier otomatis berdasarkan poin",
             "Export laporan ke Excel/PDF",
-            "API rate monitoring & anomaly detection",
             "Webhook integrasi akuntansi",
           ].map((s) => <li key={s}>{s}</li>)}
         </ul>

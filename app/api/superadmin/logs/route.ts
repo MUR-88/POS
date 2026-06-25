@@ -66,10 +66,17 @@ export async function DELETE(req: Request) {
   if (session.user.role !== "SUPER_ADMIN")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
+  // Bulk delete specific IDs
+  const body = await req.json().catch(() => null)
+  if (body?.ids && Array.isArray(body.ids) && body.ids.length > 0) {
+    const { count } = await prisma.activityLog.deleteMany({ where: { id: { in: body.ids } } })
+    return NextResponse.json({ data: { deleted: count } })
+  }
+
+  // Delete by age
   const { searchParams } = new URL(req.url)
   const olderThanDays = parseInt(searchParams.get("olderThanDays") ?? "90")
   const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000)
-
   const { count } = await prisma.activityLog.deleteMany({ where: { createdAt: { lt: cutoff } } })
   return NextResponse.json({ data: { deleted: count } })
 }
