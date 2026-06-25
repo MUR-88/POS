@@ -1,14 +1,11 @@
 import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 
-// Routes only ADMIN can access
-const ADMIN_ONLY: string[] = []
+// Routes only SUPER_ADMIN can access
+const SUPER_ADMIN_ONLY = ["/superadmin"]
 
-// Routes MANAGER + ADMIN can access
+// Routes MANAGER + ADMIN (+ SUPER_ADMIN) can access
 const MANAGER_ADMIN = ["/laporan", "/stok", "/menu", "/diskon", "/pengaturan"]
-
-// Routes all authenticated users can access
-// (kasir, meja, kds, member, shift, dashboard, kasir are open to all roles)
 
 export const proxy = auth((req) => {
   const { pathname } = req.nextUrl
@@ -19,17 +16,19 @@ export const proxy = auth((req) => {
 
   const role = req.auth.user?.role as string
 
-  // Admin-only routes
-  for (const route of ADMIN_ONLY) {
-    if (pathname.startsWith(route) && role !== "ADMIN") {
+  // Super Admin exclusive routes
+  for (const route of SUPER_ADMIN_ONLY) {
+    if (pathname.startsWith(route) && role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
   }
 
-  // Manager + Admin routes
-  for (const route of MANAGER_ADMIN) {
-    if (pathname.startsWith(route) && !["ADMIN", "MANAGER"].includes(role)) {
-      return NextResponse.redirect(new URL("/kasir", req.url))
+  // Manager + Admin routes (SUPER_ADMIN bypasses all restrictions)
+  if (role !== "SUPER_ADMIN") {
+    for (const route of MANAGER_ADMIN) {
+      if (pathname.startsWith(route) && !["ADMIN", "MANAGER"].includes(role)) {
+        return NextResponse.redirect(new URL("/kasir", req.url))
+      }
     }
   }
 

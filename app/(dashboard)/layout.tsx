@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
@@ -8,7 +8,7 @@ import {
   BarChart3, ShoppingCart, UtensilsCrossed, Package,
   TrendingUp, Settings, LogOut, Menu, X, ChefHat,
   TableIcon, Users2, MonitorPlay, ChevronRight, AlarmClock, Tag,
-  AlertCircle, PlayCircle,
+  AlertCircle, PlayCircle, Shield,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -18,17 +18,18 @@ import { SessionProvider } from "next-auth/react"
 import { ShiftProvider, useShift } from "@/lib/shift-context"
 
 const navItems = [
-  { href: "/dashboard",  label: "Dashboard",   icon: BarChart3,       roles: ["ADMIN","MANAGER","KASIR"],  color: "text-blue-400" },
-  { href: "/kasir",      label: "Kasir",        icon: ShoppingCart,    roles: ["ADMIN","MANAGER","KASIR"],  color: "text-green-400" },
-  { href: "/meja",       label: "Meja",         icon: TableIcon,       roles: ["ADMIN","MANAGER","KASIR"],  color: "text-yellow-400" },
-  { href: "/kds",        label: "Kitchen",      icon: MonitorPlay,     roles: ["ADMIN","MANAGER","KASIR"],  color: "text-orange-400" },
-  { href: "/menu",       label: "Menu",         icon: UtensilsCrossed, roles: ["ADMIN","MANAGER"],          color: "text-purple-400" },
-  { href: "/stok",       label: "Stok",         icon: Package,         roles: ["ADMIN","MANAGER"],          color: "text-red-400" },
-  { href: "/diskon",     label: "Diskon",        icon: Tag,             roles: ["ADMIN","MANAGER"],          color: "text-pink-400" },
-  { href: "/member",     label: "Member",       icon: Users2,          roles: ["ADMIN","MANAGER","KASIR"],  color: "text-indigo-400" },
-  { href: "/laporan",    label: "Laporan",      icon: TrendingUp,      roles: ["ADMIN","MANAGER"],          color: "text-cyan-400" },
-  { href: "/shift",      label: "Shift",        icon: AlarmClock,      roles: ["ADMIN","MANAGER","KASIR"],  color: "text-teal-400" },
-  { href: "/pengaturan", label: "Pengaturan",   icon: Settings,        roles: ["ADMIN","MANAGER"],          color: "text-slate-400" },
+  { href: "/dashboard",   label: "Dashboard",    icon: BarChart3,       roles: ["SUPER_ADMIN","ADMIN","MANAGER","KASIR"],  color: "text-blue-400" },
+  { href: "/kasir",       label: "Kasir",         icon: ShoppingCart,    roles: ["SUPER_ADMIN","ADMIN","MANAGER","KASIR"],  color: "text-green-400" },
+  { href: "/meja",        label: "Meja",          icon: TableIcon,       roles: ["SUPER_ADMIN","ADMIN","MANAGER","KASIR"],  color: "text-yellow-400" },
+  { href: "/kds",         label: "Kitchen",       icon: MonitorPlay,     roles: ["SUPER_ADMIN","ADMIN","MANAGER","KASIR"],  color: "text-orange-400" },
+  { href: "/menu",        label: "Menu",          icon: UtensilsCrossed, roles: ["SUPER_ADMIN","ADMIN","MANAGER"],          color: "text-purple-400" },
+  { href: "/stok",        label: "Stok",          icon: Package,         roles: ["SUPER_ADMIN","ADMIN","MANAGER"],          color: "text-red-400" },
+  { href: "/diskon",      label: "Diskon",         icon: Tag,             roles: ["SUPER_ADMIN","ADMIN","MANAGER"],          color: "text-pink-400" },
+  { href: "/member",      label: "Member",        icon: Users2,          roles: ["SUPER_ADMIN","ADMIN","MANAGER","KASIR"],  color: "text-indigo-400" },
+  { href: "/laporan",     label: "Laporan",       icon: TrendingUp,      roles: ["SUPER_ADMIN","ADMIN","MANAGER"],          color: "text-cyan-400" },
+  { href: "/shift",       label: "Shift",         icon: AlarmClock,      roles: ["SUPER_ADMIN","ADMIN","MANAGER","KASIR"],  color: "text-teal-400" },
+  { href: "/pengaturan",  label: "Pengaturan",    icon: Settings,        roles: ["SUPER_ADMIN","ADMIN","MANAGER"],          color: "text-slate-400" },
+  { href: "/superadmin",  label: "Super Admin",   icon: Shield,          roles: ["SUPER_ADMIN"],                            color: "text-purple-400" },
 ]
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
@@ -109,10 +110,13 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
 
 function ShiftBanner() {
   const { shift, isOpen, loading } = useShift()
+  const { data: session } = useSession()
   const router = useRouter()
   const pathname = usePathname()
 
   if (loading || isOpen || pathname === "/shift") return null
+  // Super admin doesn't manage shifts
+  if (session?.user?.role === "SUPER_ADMIN") return null
 
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm shrink-0">
@@ -129,6 +133,18 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const title = navItems.find(n => pathname === n.href || pathname.startsWith(n.href + "/"))?.label ?? "POS"
+
+  // Poll every 5 min to detect if session was kicked by Super Admin
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch("/api/auth/check")
+        if (!res.ok) signOut({ callbackUrl: "/login?reason=kicked" })
+      } catch {}
+    }
+    const interval = setInterval(check, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

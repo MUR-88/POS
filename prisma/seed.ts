@@ -4,15 +4,17 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  const superPass = await bcrypt.hash('SuperAdmin2026!', 12)
   const adminPass = await bcrypt.hash('Admin1234!', 12)
   const managerPass = await bcrypt.hash('Manager1234!', 12)
   const kasirPass = await bcrypt.hash('Kasir1234!', 12)
 
   await prisma.user.createMany({
     data: [
-      { name: 'Admin',   email: 'admin@pos.com',   password: adminPass,   role: 'ADMIN' },
-      { name: 'Manager', email: 'manager@pos.com', password: managerPass, role: 'MANAGER' },
-      { name: 'Kasir 1', email: 'kasir@pos.com',   password: kasirPass,   role: 'KASIR' },
+      { name: 'Super Admin', email: 'superadmin@pos.com', password: superPass, role: 'SUPER_ADMIN' },
+      { name: 'Admin',       email: 'admin@pos.com',      password: adminPass,   role: 'ADMIN' },
+      { name: 'Manager',     email: 'manager@pos.com',    password: managerPass, role: 'MANAGER' },
+      { name: 'Kasir 1',     email: 'kasir@pos.com',      password: kasirPass,   role: 'KASIR' },
     ],
     skipDuplicates: true,
   })
@@ -68,6 +70,7 @@ async function main() {
     { key: 'tax_rate',           value: '11' },
     { key: 'invoice_prefix',     value: 'INV' },
     { key: 'receipt_footer',     value: 'Terima kasih telah berkunjung! 😊' },
+    { key: 'session_timeout_mins', value: '120' },
   ]
 
   for (const setting of defaultSettings) {
@@ -75,9 +78,10 @@ async function main() {
   }
 
   console.log('✅ Seed berhasil!')
-  console.log('   Admin:   admin@pos.com   / Admin1234!')
-  console.log('   Manager: manager@pos.com / Manager1234!')
-  console.log('   Kasir:   kasir@pos.com   / Kasir1234!')
+  console.log('   Super Admin: superadmin@pos.com / SuperAdmin2026!')
+  console.log('   Admin:       admin@pos.com      / Admin1234!')
+  console.log('   Manager:     manager@pos.com    / Manager1234!')
+  console.log('   Kasir:       kasir@pos.com      / Kasir1234!')
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect())

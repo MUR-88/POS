@@ -11,25 +11,75 @@ datasource db {
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 model User {
-  id         String     @id @default(cuid())
-  name       String
-  email      String     @unique
-  password   String
-  role       Role       @default(KASIR)
-  isActive   Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  orders     Order[]
-  stockLogs  StockLog[]
-  shifts     Shift[]
+  id                  String        @id @default(cuid())
+  name                String
+  email               String        @unique
+  password            String
+  role                Role          @default(KASIR)
+  isActive            Boolean       @default(true)
+  currentSessionToken String?
+  sessionTimeoutMins  Int?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  orders              Order[]
+  stockLogs           StockLog[]
+  shifts              Shift[]
+  activityLogs        ActivityLog[]
+  userSessions        UserSession[]
 
   @@map("users")
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   MANAGER
   KASIR
+}
+
+// ─── Activity Logs ────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail  String?
+  userName   String?
+  userRole   String?
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+  method     String?
+  path       String?
+  statusCode Int?
+  duration   Int?
+  createdAt  DateTime @default(now())
+
+  @@map("activity_logs")
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+}
+
+// ─── User Sessions ────────────────────────────────────────────────────────────
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String   @unique
+  deviceInfo   String?
+  ipAddress    String?
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  isActive     Boolean  @default(true)
+
+  @@map("user_sessions")
+  @@index([userId])
 }
 
 // ─── Menu ─────────────────────────────────────────────────────────────────────

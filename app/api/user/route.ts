@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+﻿import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
@@ -8,13 +8,13 @@ const schema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(["ADMIN", "MANAGER", "KASIR"]).default("KASIR"),
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "MANAGER", "KASIR"]).default("KASIR"),
 })
 
 export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!["ADMIN", "MANAGER"].includes((session.user as any).role))
+  if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes((session.user as any).role))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const data = await prisma.user.findMany({
@@ -27,7 +27,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!["ADMIN", "MANAGER"].includes((session.user as any).role))
+  if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes((session.user as any).role))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   try {

@@ -8,7 +8,7 @@ const schema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
-  role: z.enum(["ADMIN", "MANAGER", "KASIR"]).optional(),
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "MANAGER", "KASIR"]).optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
-  if (!["ADMIN", "MANAGER"].includes(role))
+  if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(role))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id } = await params
@@ -46,7 +46,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
-  if (!["ADMIN", "MANAGER"].includes(role))
+  if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(role))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id } = await params
@@ -58,8 +58,12 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const target = await prisma.user.findUnique({ where: { id }, select: { role: true } })
   if (!target) return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 })
 
-  if (role === "MANAGER") {
-    // Manager: bisa hapus siapapun kecuali dirinya sendiri (sudah dicek di atas)
+  if (role === "SUPER_ADMIN") {
+    // Super Admin: bisa hapus siapa saja
+  } else if (role === "MANAGER") {
+    // Manager: bisa hapus ADMIN dan KASIR, tidak bisa hapus SUPER_ADMIN
+    if (target.role === "SUPER_ADMIN")
+      return NextResponse.json({ error: "Tidak bisa menghapus Super Admin" }, { status: 403 })
   } else if (role === "ADMIN") {
     // Admin: hanya bisa hapus KASIR
     if (target.role !== "KASIR")

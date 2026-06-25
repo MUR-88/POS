@@ -27,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!["ADMIN", "MANAGER"].includes(session.user?.role as string))
+  if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(session.user?.role as string))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const { id } = await params
   await prisma.table.update({ where: { id }, data: { isActive: false } })

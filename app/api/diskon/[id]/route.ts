@@ -19,7 +19,7 @@ const schema = z.object({
 })
 
 function requireManagerOrAdmin(role: string) {
-  return ["ADMIN", "MANAGER"].includes(role)
+  return ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(role)
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
